@@ -1,0 +1,49 @@
+# Base image
+FROM python:3.12-slim
+
+# Set environment variables
+ENV WORKSPACE=/app
+ENV PYTHONPATH=/app/src
+
+# Set environment variables for Python
+ENV PYTHONUNBUFFERED=1
+
+# Set environment variables for OpenAI API (excluding the API key)
+ENV OPENAI_API_BASE='http://host.docker.internal:11434'
+ENV OPENAI_MODEL_NAME='ollama/llama3.1'
+ENV OPENAI_API_KEY='ollama'
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    build-essential \
+    libssl-dev \
+    libffi-dev \
+    python3-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Upgrade pip and install Hatch, CrewAI, and optional tools
+RUN python -m pip install --upgrade pip \
+    && pip install hatch \
+    && pip install crewai \
+    && pip install 'crewai[tools]'
+
+# Set the working directory
+WORKDIR ${WORKSPACE}
+
+# Copy project files
+COPY . ${WORKSPACE}
+
+# Install the package in editable mode
+RUN python -m pip install --editable .
+
+# Expose any necessary ports
+EXPOSE 8000
+
+# Copy the entrypoint script
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Set the entrypoint
+ENTRYPOINT ["/entrypoint.sh"]
